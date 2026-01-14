@@ -1,35 +1,29 @@
 const mapa = new Map();
-const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
 
 export function obtenerUrl(req, res) {
     // Verificamos que exista contenido
-    if (req.body) {
+    if (req.body && req.body.url) {
 
-        const url = req.body.url;
-        const isValid = isUrlValid(url);
+        let url = req.body.url;
 
-        if (isValid) {
-            // Ya esta acortada, se busca la urlLarga
-            if (isUrlShort(url)) {
-                res.json({
-                    [url]: mapa.get(url)
-                });
+        // Verificamos si es que poseen los protocolos
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+            url = 'https://' + url;
+        }
 
-                return;
-            } else {
-                const urlCorta = "http://localhost:3000/url/short/" + generadorUrl();
-                mapa.set(urlCorta, url);
-                res.json({
-                    [urlCorta]: url
-                });
-
-                return;
-            }
-        } else {
+        try {
+            new URL(url);
+            const clave = generadorUrl();
+            mapa.set(clave, url);
+            res.status(201).json({
+                [`http://localhost:3000/url/short/${clave}`]: url
+            })
+            return;
+        } catch (error) {
             res.status(400).json({
-                "error": "url invalida",
-                "type_error": "Falta de protocolo HTTP/HTTPS"
-            });
+                "error": "Lo ingresado no es una URL valida"
+            })
             return;
         }
     } 
@@ -41,25 +35,6 @@ export function obtenerUrl(req, res) {
     return;
 }
 
-function isUrlShort(url) {
-    const isValid = isUrlValid(url);
-
-    // Verfica si la url ya esta acortada
-    if (isValid && mapa.get(url)) {
-        return true;
-    }
-
-    return false;
-}
-
-function isUrlValid(url) {
-    // Verifica que el url tenga el metodo correspondiente de la url 
-    if (url.startsWith('http://') || url.startsWith('https://')) {
-        return true;
-    }
-
-    return false;
-}
 
 function generadorUrl() {
     // Generamos aleatoriamente al url nueva
@@ -71,4 +46,30 @@ function generadorUrl() {
     }
 
     return resultado;
+}
+
+export function redireccionUrl(req, res) {
+    if (!req.params.clave) {
+        res.status(400).json({
+            "error": "hace falta ingresar la clave de la url"
+        });
+
+        return;
+    } 
+
+    const clave = req.params.clave;
+
+    if (mapa.has(clave)) {
+        res.status(200).json({
+            "urlCorta": mapa.get(clave)  
+        })
+
+        return;
+    } else {
+        res.status(404).json({
+            "error": "No se encuantra registrada la url ingresada"
+        });
+
+        return;
+    }
 }
