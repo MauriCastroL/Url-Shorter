@@ -60,10 +60,7 @@ export function redireccionUrl(req, res) {
     const clave = req.params.clave;
 
     if (mapa.has(clave)) {
-        res.status(200).json({
-            "urlCorta": mapa.get(clave)  
-        })
-
+        res.redirect(mapa.get(clave));
         return;
     } else {
         res.status(404).json({
