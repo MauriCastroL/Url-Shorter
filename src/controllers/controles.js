@@ -57,7 +57,7 @@ export async function obtenerUrl(req, res) {
 
 
 function generadorUrl() {
-    // Generamos aleatoriamente al url nueva
+    // Generamos aleatoriamente la url nueva
     let resultado = '';
     const longitud = 10;
 
@@ -68,10 +68,19 @@ function generadorUrl() {
     return resultado;
 }
 
-export function redireccionUrl(req, res) {
+export async function redireccionUrl(req, res) {
     if (!req.params.clave) {
         res.status(400).json({
-            "error": "hace falta ingresar la clave de la url"
+            "status": "error", 
+            "statusCode": 404,
+            "error": {
+                "code": "Bad Request",
+                "message": "Hace falta ingresar la clave de la url.",
+                "details": `La URL: http:localhost:3000/url/short/:clave tiene una clave vacia`,
+                "timestamp": Date(),
+                "path": `/url/short/`,
+                "suggestion": "Debe ingresar una clave."
+            },
         });
 
         return;
@@ -79,15 +88,23 @@ export function redireccionUrl(req, res) {
 
     const clave = req.params.clave;
 
-    if (mapa.has(clave)) {
-        res.redirect(mapa.get(clave));
-        return;
+    const data =  await lecturaDb();
+
+    if (data[clave]) {
+        res.redirect(data[clave]);
     } else {
         res.status(404).json({
-            "error": "No se encuantra registrada la url ingresada"
+            "status": "error", 
+            "statusCode": 404,
+            "error": {
+                "code": "RESOURCE_NOT_FOUND",
+                "message": "El recurso no se encuentra almacenado en la base de datos.",
+                "details": `La URL: http:localhost:3000/url/short/${clave} no se encuentra en database.json`,
+                "timestamp": Date(),
+                "path": `/url/short/${clave}`,
+                "suggestion": "Verificar el ingreso de la URL."
+            },
         });
-
-        return;
     }
 }
 

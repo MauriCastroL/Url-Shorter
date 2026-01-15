@@ -7,4 +7,4 @@ router.post('/', obtenerUrl);
 router.get('/:clave', redireccionUrl);
 router.get('/consultas/listado', obtenerConsultasAnteriores);
 
-export default router;
+export default router; 
