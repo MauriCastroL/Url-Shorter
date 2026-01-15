@@ -1,7 +1,9 @@
+import { ingresarDb, lecturaDb } from '../db/db_controler.js'
+
 const mapa = new Map();
 const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
 
-export function obtenerUrl(req, res) {
+export async function obtenerUrl(req, res) {
     // Verificamos que exista contenido
     if (req.body && req.body.url) {
 
@@ -14,17 +16,35 @@ export function obtenerUrl(req, res) {
 
         try {
             new URL(url);
-            const clave = generadorUrl();
-            mapa.set(clave, url);
-            res.status(201).json({
-                [`http://localhost:3000/url/short/${clave}`]: url
-            })
-            return;
         } catch (error) {
             res.status(400).json({
                 "error": "Lo ingresado no es una URL valida"
             })
             return;
+        }
+
+
+        try {   
+            let data = await lecturaDb();
+
+            const clave = generadorUrl();
+            mapa.set(clave, url);
+
+            data[clave] = url;
+
+            await ingresarDb(data);
+
+            res.status(201).json({  
+                [`http://localhost:3000/url/short/${clave}`]: url
+            })
+            
+            return;
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({
+                error: "Error interno del servidor",
+                detalle: error.message
+            });
         }
     } 
 
@@ -69,4 +89,9 @@ export function redireccionUrl(req, res) {
 
         return;
     }
+}
+
+export async function obtenerConsultasAnteriores(req, res) {
+    let data = await lecturaDb(req, res);
+    res.status(200).json(data);
 }
