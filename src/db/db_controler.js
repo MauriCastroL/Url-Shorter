@@ -14,7 +14,7 @@ export async function lecturaDb() {
         // Caso: DB no creada
         if (error.code === 'ENOENT') {
             ingresarDb({}); // Creamos la DB
-            return {};
+            return {}; // Devolvemos objeto vacio
         }
 
         throw new Error("No se pudo leer la base de datos: " + error.message);

@@ -4,77 +4,96 @@ const mapa = new Map();
 const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
 
 export async function obtenerUrl(req, res) {
-    // Verificamos que exista contenido
-    if (req.body && req.body.url) {
+    let url;
 
-        let url = req.body.url;
+    // Manejo de contenido JSON en req.body
+    try {
+        url = req.body.url;
+    } catch (error) {
+        res.status(400).json({
+            "status": "error", 
+            "statusCode": 400,
+            "error": {
+                "code": `${error}`,
+                "message": "Falta ingresar contenigo al Body de la petición.",
+                "details": `req.body esta vacio`,
+                "timestamp": Date(),
+                "path": `/url/short/`,
+                "suggestion": 'Debe ingresar contenido con método POST e ingresar un body tipo .JSON con el siguiente formato: {"url": "UrlLarga"}'
+            },
+        });
 
-        // Verificamos si es que poseen los protocolos
-        if (!url.startsWith('http://') && !url.startsWith('https://')) {
-            url = 'https://' + url;
+        return;
+    }
+
+    // Verificamos si es que poseen los protocolos
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = 'https://' + url;
+    }
+
+    try {
+        // Mejorar esta validacion!!!!!!!!!!!!!!
+        if (!url.includes('.')) {
+            // Url sin .com/.gov/etc
+            throw new Error("URL invalida");
         }
 
-        try {
-            // Mejorar esta validacion!!!!!!!!!!!!!!
-            if (!url.includes('.')) {
-                // Url sin .com/.gov/etc
-                throw new Error("URL invalida");
-            }
+        new URL(url);
 
-            new URL(url);
+    } catch (error) {
+        res.status(400).json({
+            "status": "error", 
+            "statusCode": 400,
+            "error": {
+                "code": "Bad Request",
+                "message": "Ingreso una url invalida.",
+                "details": `La URL: ${url} no es valida`,
+                "timestamp": Date(),
+                "path": `/url/short/`,
+                "suggestion": "Debe ingresar una url valida."
+            },
+        });
 
-        } catch (error) {
-            res.status(400).json({
-                "status": "error", 
-                "statusCode": 400,
-                "error": {
-                    "code": "Bad Request",
-                    "message": "Ingreso una url invalida.",
-                    "details": `La URL: ${url} no es valida`,
-                    "timestamp": Date(),
-                    "path": `/url/short/`,
-                    "suggestion": "Debe ingresar una url valida."
-                },
-            });
-
-            return;
-        }
+        return;
+    }
 
 
-        try {   
-            let data = await lecturaDb();
+    try {   
+        let data = await lecturaDb();
 
-            const clave = generadorUrl();
-            mapa.set(clave, url);
+        const clave = generadorUrl();
+        mapa.set(clave, url);
 
-            data[clave] = url;
+        data[clave] = url;
 
-            await ingresarDb(data);
+        await ingresarDb(data);
 
-            res.status(201).json({  
-                [`http://localhost:3000/url/short/${clave}`]: url
-            })
-            
-            return;
-        } catch (error) {
-            console.error(error);
-            res.status(500).json({
-                error: "Error interno del servidor",
-                detalle: error.message
-            });
-        }
-    } 
-
-    res.status(400).json({
-        "error": "Debe ingresar contenido en el body de la petición"
-    })
+        res.status(201).json({  
+            [`http://localhost:3000/url/short/${clave}`]: url
+        })
+        
+        return;
+    } catch (error) {
+        res.status(500).json({
+            "status": "error", 
+            "statusCode": 500,
+            "error": {
+                "code": "Internal Server Error",
+                "message": "Hubo una falla en el servidor.",
+                "details": `${error.message}`,
+                "timestamp": Date(),
+                "path": `/url/short/`,
+                "suggestion": "No fue posible establecer una conexión la base de datos, intente en otro momento."
+            },
+        });
+    }
 
     return;
 }
 
 
 function generadorUrl() {
-    // Generamos aleatoriamente la url nueva
+    // Generamos aleatoriamente la clave de url nueva
     let resultado = '';
     const longitud = 10;
 
@@ -105,7 +124,7 @@ export async function redireccionUrl(req, res) {
 
     const clave = req.params.clave;
 
-    const data =  await lecturaDb();
+    const data = await lecturaDb();
 
     if (data[clave]) {
         res.redirect(data[clave]);
@@ -138,7 +157,7 @@ export async function obtenerConsultasAnteriores(req, res) {
                 "details": "No hay registros de uso anteriores.",
                 "timestamp": Date(),
                 "path": "url/short/consultas/listado",
-                "suggestion": "Ingresaro (POST) urls para acortarlas e ingresarlas en la base de datos."                
+                "suggestion": "Ingresar (POST) urls para acortarlas e ingresarlas en la base de datos."                
             }
         })
 
