@@ -1,4 +1,5 @@
 import { ingresarDb, lecturaDb } from '../db/db_controler.js'
+import { ManejoError, ManejoSuccess, hateoas } from '../helpers/respuestas.js'
 
 const mapa = new Map();
 const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
@@ -10,20 +11,15 @@ export async function obtenerUrl(req, res) {
     try {
         url = req.body.url;
     } catch (error) {
-        res.status(400).json({
-            "status": "error", 
-            "statusCode": 400,
-            "error": {
-                "code": `${error}`,
-                "message": "Falta ingresar contenigo al Body de la petición.",
-                "details": `req.body esta vacio`,
-                "timestamp": Date(),
-                "path": `/url/short/`,
-                "suggestion": 'Debe ingresar contenido con método POST e ingresar un body tipo .JSON con el siguiente formato: {"url": "UrlLarga"}'
-            },
-        });
 
-        return;
+        return ManejoError(req, res, {
+            status_code: 400,
+            status: "error",
+            code_error: `${error}`,
+            message: "Falta ingresar contenigo al Body de la petición.",
+            details: `req.body esta vacio`,
+            suggestion: 'Debe ingresar contenido con método POST e ingresar un body tipo .JSON con el siguiente formato: {"url": "UrlLarga"}'
+        });
     }
 
     // Verificamos si es que poseen los protocolos
@@ -41,20 +37,14 @@ export async function obtenerUrl(req, res) {
         new URL(url);
 
     } catch (error) {
-        res.status(400).json({
-            "status": "error", 
-            "statusCode": 400,
-            "error": {
-                "code": "Bad Request",
-                "message": "Ingreso una url invalida.",
-                "details": `La URL: ${url} no es valida`,
-                "timestamp": Date(),
-                "path": `/url/short/`,
-                "suggestion": "Debe ingresar una url valida."
-            },
+        return ManejoError(req, res, {
+            status_code: 400,
+            status: "error",
+            code_error: "Bad Request",
+            message: "Ingreso una url invalida.",
+            details: `La URL: ${url} no es valida`,
+            suggestion: "Debe ingresar una url valida."
         });
-
-        return;
     }
 
 
@@ -68,27 +58,24 @@ export async function obtenerUrl(req, res) {
 
         await ingresarDb(data);
 
-        res.status(201).json({  
+        res.status(201).json(hateoas(false, {  
             [`http://localhost:3000/url/short/${clave}`]: url
-        })
+        }, req, {
+            self_desc: "Creación de una nueva url acortada.",
+            clave: clave
+        }));
         
         return;
     } catch (error) {
-        res.status(500).json({
-            "status": "error", 
-            "statusCode": 500,
-            "error": {
-                "code": "Internal Server Error",
-                "message": "Hubo una falla en el servidor.",
-                "details": `${error.message}`,
-                "timestamp": Date(),
-                "path": `/url/short/`,
-                "suggestion": "No fue posible establecer una conexión la base de datos, intente en otro momento."
-            },
+        return ManejoError(req, res, {
+            status_code: 500,
+            status: "error",
+            code_error: "Internal Server Error",
+            message: "Hubo una falla en el servidor.",
+            details: `${error.message}`,
+            suggestion: "No fue posible establecer una conexión la base de datos, intente en otro momento."
         });
     }
-
-    return;
 }
 
 
@@ -106,20 +93,15 @@ function generadorUrl() {
 
 export async function redireccionUrl(req, res) {
     if (!req.params.clave) {
-        res.status(400).json({
-            "status": "error", 
-            "statusCode": 404,
-            "error": {
-                "code": "Bad Request",
-                "message": "Hace falta ingresar la clave de la url.",
-                "details": `La URL: http:localhost:3000/url/short/:clave tiene una clave vacia`,
-                "timestamp": Date(),
-                "path": `/url/short/`,
-                "suggestion": "Debe ingresar una clave."
-            },
-        });
 
-        return;
+        return ManejoError(req, res, {
+            status_code: 400,
+            status: "error",
+            code_error: "Bad Request",
+            message: "Hace falta ingresar la clave de la url.",
+            details: `La URL: http:localhost:3000/url/short/:clave tiene una clave vacia`,
+            suggestion: "Debe ingresar una clave."
+        });
     } 
 
     const clave = req.params.clave;
@@ -129,17 +111,13 @@ export async function redireccionUrl(req, res) {
     if (data[clave]) {
         res.redirect(data[clave]);
     } else {
-        res.status(404).json({
-            "status": "error", 
-            "statusCode": 404,
-            "error": {
-                "code": "RESOURCE_NOT_FOUND",
-                "message": "El recurso no se encuentra almacenado en la base de datos.",
-                "details": `La URL: http:localhost:3000/url/short/${clave} no se encuentra en database.json`,
-                "timestamp": Date(),
-                "path": `/url/short/${clave}`,
-                "suggestion": "Verificar el ingreso de la URL."
-            },
+        return ManejoError(req, res, {
+            status_code: 404,
+            status: "error",
+            code_error: "RESOURCE_NOT_FOUND",
+            message: "El recurso no se encuentra almacenado en la base de datos.",
+            details: `La URL: http:localhost:3000/url/short/${clave} no se encuentra en database.json`,
+            suggestion: "Verificar el ingreso de la URL."
         });
     }
 }
@@ -148,22 +126,21 @@ export async function obtenerConsultasAnteriores(req, res) {
     let data = await lecturaDb(req, res);
 
     if (Object.keys(data).length === 0) {
-        res.status(200).json({
-            "status": "exitoso",
-            "statusCode": 200,
-            "info": {
-                "code": "NO_INFO",
-                "message": "No existen recursos en la base de datos",
-                "details": "No hay registros de uso anteriores.",
-                "timestamp": Date(),
-                "path": "url/short/consultas/listado",
-                "suggestion": "Ingresar (POST) urls para acortarlas e ingresarlas en la base de datos."                
-            }
+        // Aplicar HATEOAS 
+        return ManejoSuccess(req, res, {
+            status_code: 400,
+            status: "exitoso",
+            message: "No existen recursos en la base de datos",
+            details: "No hay registros de uso anteriores."
         })
-
-        return;
     }
 
-    res.status(200).json(data);
-    return;
+    return hateoas(false, ManejoSuccess(req, res, {
+        status_code: 400,
+            status: "exitoso",
+            message: "Listado de las url acortadas por la api.",
+            details: "Se enlistan todas las url que los usuarios han ingresado para su acortamiento."
+    }), {
+        self_desc: "Listado de urls."
+    }, req);
 }
