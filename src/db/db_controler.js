@@ -11,7 +11,9 @@ export async function lecturaDb() {
         const data = await fs.readFile(rutaDb, 'utf-8');
         return JSON.parse(data); 
     } catch (error) {
+        // Caso: DB no creada
         if (error.code === 'ENOENT') {
+            ingresarDb({}); // Creamos la DB
             return {};
         }
 

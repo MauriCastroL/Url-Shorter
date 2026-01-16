@@ -15,11 +15,28 @@ export async function obtenerUrl(req, res) {
         }
 
         try {
+            // Mejorar esta validacion!!!!!!!!!!!!!!
+            if (!url.includes('.')) {
+                // Url sin .com/.gov/etc
+                throw new Error("URL invalida");
+            }
+
             new URL(url);
+
         } catch (error) {
             res.status(400).json({
-                "error": "Lo ingresado no es una URL valida"
-            })
+                "status": "error", 
+                "statusCode": 400,
+                "error": {
+                    "code": "Bad Request",
+                    "message": "Ingreso una url invalida.",
+                    "details": `La URL: ${url} no es valida`,
+                    "timestamp": Date(),
+                    "path": `/url/short/`,
+                    "suggestion": "Debe ingresar una url valida."
+                },
+            });
+
             return;
         }
 
@@ -110,5 +127,24 @@ export async function redireccionUrl(req, res) {
 
 export async function obtenerConsultasAnteriores(req, res) {
     let data = await lecturaDb(req, res);
+
+    if (Object.keys(data).length === 0) {
+        res.status(200).json({
+            "status": "exitoso",
+            "statusCode": 200,
+            "info": {
+                "code": "NO_INFO",
+                "message": "No existen recursos en la base de datos",
+                "details": "No hay registros de uso anteriores.",
+                "timestamp": Date(),
+                "path": "url/short/consultas/listado",
+                "suggestion": "Ingresaro (POST) urls para acortarlas e ingresarlas en la base de datos."                
+            }
+        })
+
+        return;
+    }
+
     res.status(200).json(data);
+    return;
 }
