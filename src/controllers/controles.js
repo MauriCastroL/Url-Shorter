@@ -58,14 +58,15 @@ export async function obtenerUrl(req, res) {
 
         await ingresarDb(data);
 
-        res.status(201).json(hateoas(false, {  
-            [`http://localhost:3000/url/short/${clave}`]: url
-        }, req, {
-            self_desc: "Creación de una nueva url acortada.",
+        return ManejoSuccess(req, res, {
+            status_code: 201,
+            message: `URL: ${`http://localhost:3000/url/short/${clave}`} creada con exito.`,
+            details: "La url fue acortada y almacenada lista para usarla pegandola en el buscador."
+        }, hateoas(false, {
+            self_desc: "Acceder a la nueva url acortada.",
             clave: clave
-        }));
+        }, req));
         
-        return;
     } catch (error) {
         return ManejoError(req, res, {
             status_code: 500,
@@ -135,12 +136,13 @@ export async function obtenerConsultasAnteriores(req, res) {
         })
     }
 
-    return hateoas(false, ManejoSuccess(req, res, {
-        status_code: 400,
+    return ManejoSuccess(req, res, {
+            status_code: 200,
             status: "exitoso",
             message: "Listado de las url acortadas por la api.",
             details: "Se enlistan todas las url que los usuarios han ingresado para su acortamiento."
-    }), {
-        self_desc: "Listado de urls."
-    }, req);
+        }, hateoas(false, {
+            self_desc:  "Listado de urls.",
+            clave: 'consultas/listado'
+        }, req));
 }
