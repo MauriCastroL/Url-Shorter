@@ -146,12 +146,12 @@ export async function obtenerConsultasAnteriores(req, res) {
 
     if (Object.keys(data).length === 0) {
         // Aplicar HATEOAS 
-        return ManejoSuccess(req, res, {
-            status_code: 400,
+        return ManejoSuccess(req, res, null, {
+            status_code: 200,
             status: "exitoso",
             message: "No existen recursos en la base de datos",
-            details: "No hay registros de uso anteriores."
-        })
+            details: "No hay registros de uso anteriores.",
+        }, hateoas(false, {}, req))
     }
 
     try {

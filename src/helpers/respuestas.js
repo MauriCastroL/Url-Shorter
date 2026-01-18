@@ -14,9 +14,9 @@ export function ManejoError(req, res, { status_code, status, code, message, deta
     });
 }
 
-export function ManejoSuccess(req, res, data, { status_code, status, message, details, meta_opcional = null}, _links) {
+export function ManejoSuccess(req, res, data = null, { status_code, status, message, details, meta_opcional = null}, _links) {
     return res.status(Number(status_code)).json({
-        data,
+        ...(data && { data }),
         "status": status,
         "statusCode": status_code,
         "info": {
