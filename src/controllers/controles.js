@@ -142,6 +142,7 @@ export async function redireccionUrl(req, res) {
 
 export async function obtenerConsultasAnteriores(req, res) {
     let data = await lecturaDb(req, res);
+    const linksArray = Object.values(data);
 
     if (Object.keys(data).length === 0) {
         // Aplicar HATEOAS 
@@ -153,10 +154,38 @@ export async function obtenerConsultasAnteriores(req, res) {
         })
     }
 
-    return ManejoSuccess(req, res, data, {
+    try {
+        // Manejamos paginación
+        const pagina = Number(req.query.page) || 1;
+        const limite = Number(req.query.limit) || 5;
+
+        const startIndex = (pagina - 1) * limite;
+        const endIndex = pagina * limite;
+
+        const resultados = linksArray.slice(startIndex, endIndex);
+
+        return ManejoSuccess(req, res, resultados, {
             status_code: 200,
             status: "exitoso",
             message: "Listado de las url acortadas por la api.",
-            details: "Se enlistan todas las url que los usuarios han ingresado para su acortamiento."
+            details: "Se enlistan todas las url que los usuarios han ingresado para su acortamiento.",
+            meta_opcional: {
+                total: Math.ceil(linksArray.length / limite),
+                page: pagina,
+                limit: limite,
+                next: endIndex < linksArray.length ? `/listado?page=${pagina + 1}&limit=${limite}` : null,
+                prev: startIndex > 0 ? `/listado?page=${pagina - 1}&limit=${limite}` : null
+            }
         }, hateoas(false, {}, req));
+
+    } catch (error) {
+        return ManejoError(req, res, {
+            status_code: 500,
+            status: "error",
+            code_error: error,
+            message: error.message,
+            details: `Algo a salido mal con la paginación.`,
+            suggestion: "Contactarse con soporte para la pronta depuración."
+        });
+    }
 }

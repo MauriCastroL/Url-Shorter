@@ -14,7 +14,7 @@ export function ManejoError(req, res, { status_code, status, code, message, deta
     });
 }
 
-export function ManejoSuccess(req, res, data, { status_code, status, message, details }, _links) {
+export function ManejoSuccess(req, res, data, { status_code, status, message, details, meta_opcional = null}, _links) {
     return res.status(Number(status_code)).json({
         data,
         "status": status,
@@ -25,6 +25,7 @@ export function ManejoSuccess(req, res, data, { status_code, status, message, de
             "timestamp": new Date().toISOString(),
             "path": req.originalUrl
         },
+        ...(meta_opcional && { meta: meta_opcional }),
         _links
     })
 }
