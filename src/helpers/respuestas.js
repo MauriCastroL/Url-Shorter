@@ -14,8 +14,9 @@ export function ManejoError(req, res, { status_code, status, code, message, deta
     });
 }
 
-export function ManejoSuccess(req, res, { status_code, status, message, details }, _links) {
+export function ManejoSuccess(req, res, data, { status_code, status, message, details }, _links) {
     return res.status(Number(status_code)).json({
+        data,
         "status": status,
         "statusCode": status_code,
         "info": {
@@ -28,34 +29,7 @@ export function ManejoSuccess(req, res, { status_code, status, message, details 
     })
 }
 
-export function hateoas(isAdmin = false, { self_desc, clave }, req) {
-    if (!isAdmin) {
-        return {
-            "self": {
-            "href": req.protocol + '://' + req.host + "/url/short/" + clave,
-            "method": "GET",
-            "desc": self_desc
-            }
-        }
-    } else {
-        return {
-            "self": {
-            "href": req.protocol + '://' + req.host + "/url/short/" + clave,
-            "method": "GET",
-            "desc": self_desc
-            },
-            "delete": {
-            "href": "http://localhost:3000/api/url/" + clave,
-            "method": "DELETE",
-            "desc": "Borrar esta URL permanentemente"
-            },
-            "update": {
-            "href": "http://localhost:3000/api/url/abc12",
-            "method": "PATCH",
-            "desc": "Modificar la URL original"
-            }
-        }
-    }
-
+export function hateoas(isAdmin = false, links = {}, req) {
+    // TO-DO
 } 
 

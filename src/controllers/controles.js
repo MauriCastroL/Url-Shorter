@@ -1,7 +1,7 @@
 import { ingresarDb, lecturaDb } from '../db/db_controler.js'
 import { ManejoError, ManejoSuccess, hateoas } from '../helpers/respuestas.js'
+import validator from 'validator';
 
-const mapa = new Map();
 const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
 
 export async function obtenerUrl(req, res) {
@@ -28,13 +28,15 @@ export async function obtenerUrl(req, res) {
     }
 
     try {
-        // Mejorar esta validacion!!!!!!!!!!!!!!
-        if (!url.includes('.')) {
-            // Url sin .com/.gov/etc
-            throw new Error("URL invalida");
-        }
 
         new URL(url);
+
+        if (!validator.isURL(url, { 
+            require_protocol: true,  
+            require_tld: true       
+        })) {
+            throw new Error("Bad Request");
+        }
 
     } catch (error) {
         return ManejoError(req, res, {
@@ -49,24 +51,37 @@ export async function obtenerUrl(req, res) {
 
 
     try {   
+        // Leemos la db
         let data = await lecturaDb();
 
-        const clave = generadorUrl();
-        mapa.set(clave, url);
+        // Genero la nueva clave que acorte la URL
+        let clave = generadorUrl();
 
-        data[clave] = url;
+        // Nos aseguramos de crear claves únicas
+        while (clave in data) {
+            clave = generadorUrl();
+        }
 
+        // Ingresamos información de la creación
+        data[clave] = {
+            "createdAt": new Date().toISOString(),
+            "urlOriginal": url,
+            "urlAcortada": req.protocol + '://' + req.host + req.originalUrl + clave,
+            "visits": 0
+        }
+
+        // Reescribimos los datos en la db
         await ingresarDb(data);
 
         return ManejoSuccess(req, res, {
+            "urlOriginal": url,
+            "urlAcortada": req.protocol + '://' + req.host + req.originalUrl + clave
+        }, {
             status_code: 201,
             message: `URL: ${`http://localhost:3000/url/short/${clave}`} creada con exito.`,
             details: "La url fue acortada y almacenada lista para usarla pegandola en el buscador."
-        }, hateoas(false, {
-            self_desc: "Acceder a la nueva url acortada.",
-            clave: clave
-        }, req));
-        
+        }, hateoas(false, {}, req));
+
     } catch (error) {
         return ManejoError(req, res, {
             status_code: 500,
@@ -110,7 +125,9 @@ export async function redireccionUrl(req, res) {
     const data = await lecturaDb();
 
     if (data[clave]) {
-        res.redirect(data[clave]);
+        data[clave].visits += 1;
+        await ingresarDb(data);
+        res.redirect(data[clave].urlOriginal);
     } else {
         return ManejoError(req, res, {
             status_code: 404,
@@ -136,13 +153,10 @@ export async function obtenerConsultasAnteriores(req, res) {
         })
     }
 
-    return ManejoSuccess(req, res, {
+    return ManejoSuccess(req, res, data, {
             status_code: 200,
             status: "exitoso",
             message: "Listado de las url acortadas por la api.",
             details: "Se enlistan todas las url que los usuarios han ingresado para su acortamiento."
-        }, hateoas(false, {
-            self_desc:  "Listado de urls.",
-            clave: 'consultas/listado'
-        }, req));
+        }, hateoas(false, {}, req));
 }
